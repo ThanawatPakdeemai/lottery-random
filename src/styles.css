@@ -1,0 +1,36 @@
+@import 'tailwindcss';
+@theme {
+  --color-bg: #e9edf5;
+  --color-panel: #ffffff;
+  --color-ink: #111a2e;
+  --color-muted: #5b6578;
+  --color-line: #cdd5e3;
+  --color-cell: #f1f4fa;
+  --color-accent: #c4122f;
+  --color-accent-ink: #ffffff;
+  --font-sans: 'Noto Sans Thai', system-ui, sans-serif;
+  --font-display: 'Mitr', 'Noto Sans Thai', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+@layer base {
+  body { @apply m-0 min-w-72 bg-bg font-sans text-ink antialiased; padding: max(28px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(40px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  button, a { @apply focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent; }
+  button { @apply cursor-pointer disabled:cursor-not-allowed disabled:opacity-40; }
+  [hidden] { display: none !important; }
+  dialog::backdrop { background: rgb(0 0 0 / 60%); }
+}
+@layer components {
+  .btn { @apply rounded-lg border border-line px-3 py-2 text-sm font-medium transition-colors hover:bg-cell; }
+  .btn-primary { @apply rounded-xl bg-accent px-4 py-3 font-semibold text-accent-ink transition-opacity hover:opacity-90; }
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-bg: #0b1120; --color-panel: #141c30; --color-ink: #e9eef9;
+    --color-muted: #9aa5bd; --color-line: #2a3552; --color-cell: #0e1527;
+    --color-accent: #ff5470; --color-accent-ink: #1a0710;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
