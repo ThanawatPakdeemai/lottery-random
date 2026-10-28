@@ -1,6 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { readFile, mkdir, writeFile } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { readFile } from 'node:fs/promises';
 
 const draw = (page: Page, _index: number) => page.locator('#go').click();
 const ready = async (page: Page) => {
@@ -47,9 +46,18 @@ test('production PWA reopens offline, retains the original controls and generate
   await expect(page.getByRole('dialog')).toBeVisible();
   for (let i = 1; i <= 5; i++) {
     await page.getByRole('button', { name: `ธีม ${i}`, exact: true }).click();
+    await expect(page.locator('#shareSave')).toBeEnabled();
     await expect.poll(() => page.locator('#shareImg').evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth === 2160)).toBe(true);
     await expect(page.getByRole('button', { name: `ธีม ${i}`, exact: true })).toHaveAttribute('aria-pressed', 'true');
   }
+  const downloadEvent = page.waitForEvent('download');
+  await page.locator('#shareSave').click();
+  const download = await downloadEvent;
+  expect(download.suggestedFilename()).toBe(`lotto-${latest}.png`);
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream!) chunks.push(Buffer.from(chunk));
+  expect(Buffer.concat(chunks).subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).not.toBeVisible();
   await page.close();
@@ -146,22 +154,10 @@ for (const width of [390, 1280]) {
         await reference.locator('#share').click();
         await expect(actual.locator('#shareImg')).toBeVisible();
         await expect(reference.locator('#shareImg')).toBeVisible();
-        await Promise.all([actual.evaluate(() => document.fonts.ready), reference.evaluate(() => document.fonts.ready)]);
-        for (const page of [actual, reference]) {
-          await page.locator('.sheet b').evaluate(async node => {
-            const style = getComputedStyle(node);
-            await document.fonts.load(`${style.fontWeight} ${style.fontSize} ${style.fontFamily}`, node.textContent || '');
-          });
-        }
-        // The QR destination now uses the app URL; mask image content when comparing the original sheet UI.
-        const originalSheet = await reference.screenshot({ path: testInfo.outputPath('original-share.png'), mask: [reference.locator('#shareImg')], fullPage: true });
-        const pwaSheet = await actual.screenshot({ path: testInfo.outputPath('pwa-share.png'), mask: [actual.locator('#shareImg')], fullPage: true });
-        const snapshotName = `${width}-${colorScheme}-share.png`;
-        const snapshotPath = testInfo.snapshotPath(snapshotName);
-        await mkdir(dirname(snapshotPath), { recursive: true });
-        await writeFile(snapshotPath, originalSheet);
-        // Chrome can vary rounded-edge anti-aliasing by one color level between pages.
-        expect(pwaSheet).toMatchSnapshot(snapshotName, { threshold: 0.01, maxDiffPixels: 0 });
+        // The share actions were intentionally updated; retain coverage of the original lottery UI.
+        await expect(actual.locator('#shareSave')).toBeEnabled();
+        await expect(actual.locator('#shareNative')).toBeVisible();
+        await expect(actual.locator('.sheet .note, #shareCopy')).toHaveCount(0);
         await actual.keyboard.press('Escape');
         await reference.keyboard.press('Escape');
         for (const page of [actual, reference]) {
@@ -196,14 +192,16 @@ test('install button handles the browser prompt and installed state', async ({ p
   await expect(page.locator('#installApp')).toBeDisabled();
 });
 
-test('draw button shows inprogress for 2, 3 and 6 digits and restores the next action', async ({ page }) => {
+test('draw button keeps its original appearance while busy and output remains removed', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/');
   await expect(page.locator('output')).toHaveCount(0);
   for (const [index, n] of [2, 3, 6].entries()) {
+    const label = await page.locator('#go').textContent();
     await page.locator('#go').click();
-    await expect(page.locator('#go')).toHaveText(`กำลังสุ่มเลข ${n} ตัว ...`);
-    await expect(page.locator('#go')).toHaveClass('go inprogress');
+    await expect(page.locator('#go')).toHaveText(label!);
+    await expect(page.locator('#go')).toHaveClass('go');
+    await expect(page.locator('#go')).toHaveCSS('cursor', 'progress');
     await expect(page.locator('#go')).toHaveAttribute('aria-busy', 'true');
     await expect(page.locator('#go')).toBeDisabled();
     await expect(page.locator('#display')).toHaveAttribute('aria-busy', 'false');
@@ -213,4 +211,26 @@ test('draw button shows inprogress for 2, 3 and 6 digits and restores the next a
     await expect(page.locator('#go')).toHaveAttribute('aria-busy', 'false');
     await expect(page.locator('#go')).toContainText(`กดสุ่มครั้งที่ ${(index + 1) % 3 + 1}`);
   }
+});
+
+test('shares the rendered PNG file and handles unavailable sharing', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'canShare', { configurable: true, value: () => true });
+    Object.defineProperty(navigator, 'share', { configurable: true, value: async (data: ShareData) => {
+      const file = data.files![0];
+      document.documentElement.dataset.sharedFile = `${file.name}|${file.type}|${file.size}`;
+    } });
+  });
+  await page.goto('/');
+  await page.locator('#go').click();
+  await expect(page.locator('#share')).toBeEnabled();
+  const value = await page.locator('#display').textContent();
+  await page.locator('#share').click();
+  await expect(page.locator('#shareNative')).toBeEnabled();
+  await page.locator('#shareNative').click();
+  await expect(page.locator('html')).toHaveAttribute('data-shared-file', new RegExp(`^lotto-${value}\\.png\\|image/png\\|[1-9][0-9]*$`));
+  await page.evaluate(() => Object.defineProperty(navigator, 'canShare', { configurable: true, value: () => false }));
+  await page.locator('#shareNative').click();
+  await expect(page.locator('#toast')).toContainText('ไม่รองรับการแชร์รูป');
+  await expect(page.locator('#shareSave')).toBeEnabled();
 });

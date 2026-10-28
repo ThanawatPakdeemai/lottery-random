@@ -215,7 +215,6 @@ h1 {
   border-color: var(--accent);
 }
 
-
 .stub {
   border-top: 2px dashed var(--line);
   padding: 16px 18px 18px;
@@ -411,6 +410,15 @@ h1 {
   font-size: 1.05rem;
   margin: 0;
 }
+.sheet-body {
+  display: flex;
+  gap: 16px;
+  flex-direction: row;
+  align-items: center;
+}
+.info {
+  margin: 0px 0px 5px 0px;
+}
 .theme-title {
   font-family: var(--font-display);
   font-weight: 600;
@@ -460,6 +468,7 @@ h1 {
 
 .toast {
   position: fixed;
+  z-index: 10;
   left: 50%;
   bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%);
@@ -485,21 +494,15 @@ h1 {
   padding: 12px 14px;
 }
 
-.go.inprogress::before {
-  content: "";
-  display: inline-block;
-  width: 0.85em;
-  height: 0.85em;
-  margin-inline-end: 0.5em;
-  vertical-align: -0.1em;
-  border: 2px solid currentColor;
-  border-right-color: transparent;
-  border-radius: 50%;
-  animation: draw-progress 0.8s linear infinite;
+.share-save {
+  font-weight: 600;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
 }
-@keyframes draw-progress {
-  to { transform: rotate(360deg); }
+.share-save:hover:not(:disabled) {
+  border-color: var(--accent);
 }
-@media (prefers-reduced-motion: reduce) {
-  .go.inprogress::before { animation: none; }
+.share-save:disabled {
+  color: var(--accent-ink);
 }

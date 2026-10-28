@@ -25,10 +25,10 @@ export function LotteryPage(root: HTMLElement): void {
   var shareBtn = element<HTMLButtonElement>("share");
   var shade = element("shade");
   var shareImg = element<HTMLImageElement>("shareImg");
+  var shareInfo = element<HTMLParagraphElement>("shareInfo");
   var shareClose = element<HTMLButtonElement>("shareClose");
-  var shareCopy = element<HTMLButtonElement>("shareCopy");
+  var shareSave = element<HTMLButtonElement>("shareSave");
   var shareNative = element<HTMLButtonElement>("shareNative");
-  var shareInfo = element("shareInfo");
   var histList = element("histList");
   var toastEl = element("toast");
 
@@ -120,12 +120,7 @@ export function LotteryPage(root: HTMLElement): void {
 
   function renderButton() {
     var m = MODES[step];
-    goBtn.classList.toggle("inprogress", busy);
     goBtn.setAttribute("aria-busy", String(busy));
-    if (busy) {
-      goBtn.textContent = `กำลังสุ่มเลข ${m.n} ตัว ...`;
-      return;
-    }
     goBtn.innerHTML =
       "กดสุ่มครั้งที่ " +
       (step + 1) +
@@ -172,19 +167,7 @@ export function LotteryPage(root: HTMLElement): void {
         li.setAttribute("role", "button");
         li.setAttribute("aria-label", "ดูรูปผลการสุ่ม " + h.value);
         var openRow = function () {
-          openCard(
-            h.value,
-            h.ts,
-            h.time,
-            "ครั้งที่ " +
-              h.idx +
-              " · เลข " +
-              h.n +
-              " ตัว · " +
-              (when.date ? when.date + " " : "") +
-              when.time,
-            li,
-          );
+          openCard(h.value, h.ts, h.time, li);
         };
         li.addEventListener("click", openRow);
         li.addEventListener("keydown", function (e) {
@@ -336,8 +319,9 @@ export function LotteryPage(root: HTMLElement): void {
 
   // ---- Share image: the current result drawn on a canvas in the page's own colours ----
 
-  var shareBlob: Blob | null = null;
   var shareFile: File | null = null;
+  var shareUrl: string | null = null;
+  var shareGeneration = 0;
 
   var THEME_COUNT = 5;
   var shareTheme = 0;
@@ -346,57 +330,33 @@ export function LotteryPage(root: HTMLElement): void {
   var shareOpener: HTMLElement | null = null;
 
   // Build the image for one draw and show it in the sheet
-  function openCard(value: string, ts: number, timeText: string, info: string, opener: HTMLElement | null) {
+  function openCard(value: string, ts: number, timeText: string, opener: HTMLElement | null) {
     if (busy) return;
-    shareOpener = opener || null;
+    shareOpener = opener;
     shareTheme = 0;
     syncThemeButtons();
-    cardState = { value: value, ts: ts, timeText: timeText };
-    loadFonts().then(function () {
-      var cv = renderCard(value, ts, timeText, shareTheme);
-      shareInfo.textContent = info;
-      shareImg.src = cv.toDataURL("image/png");
-      shareBlob = null;
-      shareFile = null;
-      shareNative.hidden = true;
-      cv.toBlob(function (blob) {
-        shareBlob = blob;
-        try {
-          if (blob && window.File && navigator.canShare) {
-            var f = new File([blob], "lotto-" + value + ".png", {
-              type: "image/png",
-            });
-            if (navigator.canShare({ files: [f] })) {
-              shareFile = f;
-              shareNative.hidden = false;
-            }
-          }
-        } catch (e) {}
-      }, "image/png");
-      shade.hidden = false;
-      shareClose.focus();
-    });
+    cardState = { value, ts, timeText };
+    const when = fmtWhen({ ts, time: timeText });
+    const timestamp = [when.date, when.time].filter(Boolean).join(" ");
+    shareInfo.textContent = [`เลข ${value.length} ตัว`, timestamp].filter(Boolean).join(" · ");
+    shade.hidden = false;
+    shareClose.focus();
+    void repaintTheme();
   }
 
   function openShare() {
-    if (!lastValue) return;
-    var w = lastTs ? fmtWhen({ ts: lastTs, time: "" }) : null;
-    openCard(
-      lastValue,
-      lastTs,
-      "",
-      "ผลล่าสุด · เลข " +
-        lastValue.length +
-        " ตัว" +
-        (w ? " · " + w.date + " " + w.time : ""),
-      shareBtn,
-    );
+    if (lastValue) openCard(lastValue, lastTs, "", shareBtn);
   }
 
   function closeShare() {
     shade.hidden = true;
-    if (shareOpener && document.body.contains(shareOpener))
-      shareOpener.focus();
+    shareGeneration++;
+    cardState = null;
+    shareFile = null;
+    if (shareUrl) URL.revokeObjectURL(shareUrl);
+    shareUrl = null;
+    shareImg.removeAttribute("src");
+    if (shareOpener && document.body.contains(shareOpener)) shareOpener.focus();
   }
 
   // Theme buttons 1-5: numbers only; the chosen one is filled red
@@ -427,30 +387,35 @@ export function LotteryPage(root: HTMLElement): void {
   }
 
   // Redraw the open image after a different theme is picked
-  function repaintTheme() {
+  async function repaintTheme(): Promise<void> {
     if (!cardState) return;
-    var cs = cardState;
-    loadFonts().then(function () {
-      var cv = renderCard(cs.value, cs.ts, cs.timeText, shareTheme);
-      shareImg.src = cv.toDataURL("image/png");
-      shareBlob = null;
-      shareFile = null;
-      shareNative.hidden = true;
-      cv.toBlob(function (blob) {
-        shareBlob = blob;
-        try {
-          if (blob && window.File && navigator.canShare) {
-            var f = new File([blob], "lotto-" + cs.value + ".png", {
-              type: "image/png",
-            });
-            if (navigator.canShare({ files: [f] })) {
-              shareFile = f;
-              shareNative.hidden = false;
-            }
-          }
-        } catch (e) {}
-      }, "image/png");
-    });
+    const state = cardState;
+    const theme = shareTheme;
+    const generation = ++shareGeneration;
+    shareFile = null;
+    shareSave.disabled = true;
+    shareNative.disabled = true;
+    shareImg.setAttribute("aria-busy", "true");
+    try {
+      await loadFonts();
+      if (generation !== shareGeneration || shade.hidden) return;
+      const canvas = renderCard(state.value, state.ts, state.timeText, theme);
+      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png"));
+      canvas.width = canvas.height = 0;
+      if (generation !== shareGeneration || shade.hidden) return;
+      if (!blob) throw new Error("Unable to encode PNG");
+      const nextUrl = URL.createObjectURL(blob);
+      if (shareUrl) URL.revokeObjectURL(shareUrl);
+      shareUrl = nextUrl;
+      shareFile = new File([blob], `lotto-${state.value}.png`, { type: "image/png" });
+      shareImg.src = shareUrl;
+      shareSave.disabled = false;
+      shareNative.disabled = false;
+    } catch {
+      if (generation === shareGeneration && !shade.hidden) toast("สร้างรูปไม่สำเร็จ กรุณาลองใหม่");
+    } finally {
+      if (generation === shareGeneration) shareImg.setAttribute("aria-busy", "false");
+    }
   }
   syncThemeButtons();
 
@@ -462,28 +427,31 @@ export function LotteryPage(root: HTMLElement): void {
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && !shade.hidden) closeShare();
   });
-  shareCopy.addEventListener("click", function () {
-    var fail = function () {
-      toast("คัดลอกรูปไม่ได้ ให้กดค้างหรือคลิกขวาที่รูปเพื่อบันทึกแทน");
-    };
-    if (!shareBlob || !navigator.clipboard || !window.ClipboardItem)
-      return fail();
-    try {
-      navigator.clipboard
-        .write([new ClipboardItem({ "image/png": shareBlob })])
-        .then(function () {
-          toast("คัดลอกรูปแล้ว");
-        })
-        .catch(fail);
-    } catch (e) {
-      fail();
-    }
+  shareSave.addEventListener("click", function () {
+    if (!shareFile || !shareUrl) return;
+    const link = document.createElement("a");
+    link.href = shareUrl;
+    link.download = shareFile.name;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   });
-  shareNative.addEventListener("click", function () {
-    if (!shareFile || !navigator.share) return;
-    navigator
-      .share({ files: [shareFile], title: "เครื่องสุ่มหวย" })
-      .catch(function () {});
+  shareNative.addEventListener("click", async function () {
+    if (!shareFile) return;
+    try {
+      if (!navigator.share || (navigator.canShare && !navigator.canShare({ files: [shareFile] }))) {
+        toast("เบราว์เซอร์นี้ไม่รองรับการแชร์รูป กรุณากดบันทึกรูปแทน");
+        return;
+      }
+      shareNative.disabled = true;
+      await navigator.share({ files: [shareFile], title: "เครื่องสุ่มหวย" });
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        toast("แชร์รูปไม่สำเร็จ กรุณากดบันทึกรูปแทน");
+      }
+    } finally {
+      shareNative.disabled = !shareFile;
+    }
   });
 
   // Step back one digit length so it can be drawn again; history stays
