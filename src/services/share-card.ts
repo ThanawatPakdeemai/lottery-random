@@ -1,16 +1,18 @@
 import qrcode from 'qrcode-generator';
-import { MODES, fmtWhen } from '../domain/lottery.js';
-
-// QR points to the installed application's own base URL, including subdirectory deployments.
+import { MODES, fmtWhen } from '../domain/lottery';
 const APP_URL = new URL(import.meta.env.BASE_URL, window.location.origin).href;
-const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-let fontPromise;
+function cssVar(name: string) {
+  return getComputedStyle(document.documentElement)
+    .getPropertyValue(name)
+    .trim();
+}
+
 export function loadFonts() {
   if (!document.fonts || !document.fonts.load) return Promise.resolve();
   var thai =
     "เครื่องสุ่มหวย สุ่มเพื่อความบันเทิง ผลไม่เกี่ยวกับสลากจริง ม.ค. ก.พ. มี.ค. เม.ย. พ.ค. มิ.ย. ก.ค. ส.ค. ก.ย. ต.ค. พ.ย. ธ.ค. เลขตัว ขอให้เฮงรวยหวยถูก สแกนเพื่อใช้เครื่องสุ่มหวย ()-0123456789:";
-  return fontPromise ??= Promise.all([
+  return Promise.all([
     document.fonts.load("600 54px Mitr", thai),
     document.fonts.load('600 28px "Noto Sans Thai"', thai),
     document.fonts.load('400 26px "Noto Sans Thai"', thai),
@@ -19,7 +21,7 @@ export function loadFonts() {
   ]).catch(function () {});
 }
 
-function roundRect(ctx, x, y, w, h, r) {
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -29,7 +31,7 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-function wrapLines(ctx, text, maxW) {
+function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxW: number) {
   var lines = [],
     cur = "";
   text.split(" ").forEach(function (w) {
@@ -89,7 +91,7 @@ var WM_LAYOUTS = [
 
 
 // Large, faint, tilted wording behind the content. Clamped and clipped so it stays inside the card frame.
-function drawWatermark(ctx, W, H, themeIdx, color) {
+function drawWatermark(ctx: CanvasRenderingContext2D, W: number, H: number, themeIdx: number, color: string) {
   var phrase = PHRASES[themeIdx] || PHRASES[0];
   var spots = WM_LAYOUTS[themeIdx] || WM_LAYOUTS[0];
   var pad = 44;
@@ -135,22 +137,23 @@ function drawWatermark(ctx, W, H, themeIdx, color) {
   ctx.restore();
 }
 
-export function renderCard(value, ts, timeText, themeIdx) {
+export function renderCard(value: string, ts: number, timeText: string, themeIdx: number) {
   var S = 2,
     W = 1080,
     H = 720;
   var cv = document.createElement("canvas");
   cv.width = W * S;
   cv.height = H * S;
-  var ctx = cv.getContext("2d");
+  const ctx = cv.getContext("2d");
+  if (!ctx) throw new Error("Canvas is not supported");
   ctx.scale(S, S);
-  var bg = cssVar("--color-bg"),
-    panel = cssVar("--color-panel"),
-    ink = cssVar("--color-ink"),
-    muted = cssVar("--color-muted");
-  var line = cssVar("--color-line"),
-    cellBg = cssVar("--color-cell"),
-    accent = cssVar("--color-accent");
+  var bg = cssVar("--bg"),
+    panel = cssVar("--panel"),
+    ink = cssVar("--ink"),
+    muted = cssVar("--muted");
+  var line = cssVar("--line"),
+    cellBg = cssVar("--cell"),
+    accent = cssVar("--accent");
   var L = 80,
     R = W - 80;
 
@@ -265,15 +268,15 @@ export function renderCard(value, ts, timeText, themeIdx) {
     qr.addData(APP_URL);
     qr.make();
     var cnt = qr.getModuleCount();
-    var cs = qs / (cnt + 8);
-    var quiet = 4 * cs;
+    var inner = qs - 20;
+    var cs = inner / cnt;
     ctx.fillStyle = "#000000";
     for (var r = 0; r < cnt; r++) {
       for (var c = 0; c < cnt; c++) {
         if (qr.isDark(r, c))
           ctx.fillRect(
-            qx + quiet + c * cs,
-            qy + quiet + r * cs,
+            qx + 10 + c * cs,
+            qy + 10 + r * cs,
             cs + 0.6,
             cs + 0.6,
           );
@@ -287,4 +290,3 @@ export function renderCard(value, ts, timeText, themeIdx) {
   ctx.fillText("สแกนเพื่อใช้เครื่องสุ่มหวย", R, 632);
   return cv;
 }
-

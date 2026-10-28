@@ -1,6 +1,6 @@
-import test from 'node:test';
+import { test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { initialState, normalizeState, randomDigit, completeDraw, back, reset } from '../src/domain/lottery.js';
+import { initialState, normalizeState, randomDigit, completeDraw, back, reset } from '../src/domain/lottery';
 
 test('cycle 2 → 3 → 6 preserves leading zeroes and counts rounds', () => {
   let state = initialState();
@@ -43,6 +43,6 @@ test('storage validates legacy records and rejects malformed values', () => {
 });
 test('random digits reject biased bytes before modulo', () => {
   const bytes = [255, 250, 249];
-  assert.equal(randomDigit({ getRandomValues(array) { array[0] = bytes.shift(); } }), '9');
+  assert.equal(randomDigit({ getRandomValues(array: Uint8Array) { array[0] = bytes.shift()!; } }), '9');
   assert.equal(bytes.length, 0);
 });

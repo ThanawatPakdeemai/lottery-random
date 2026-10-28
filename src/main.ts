@@ -5,6 +5,10 @@ import '@fontsource/mitr/500.css';
 import '@fontsource/mitr/600.css';
 import '@fontsource/ibm-plex-mono/500.css';
 import './styles.css';
-import { LotteryPage } from './pages/LotteryPage.js';
+import { LotteryPage } from './pages/LotteryPage';
+import { registerPwa } from './pwa/register';
 
-LotteryPage(document.getElementById('app'));
+const root = document.getElementById('app');
+if (!root) throw new Error('Missing application root');
+LotteryPage(root);
+registerPwa();

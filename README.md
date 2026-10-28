@@ -1,82 +1,83 @@
 # เครื่องสุ่มหวย PWA
 
-แปลงจาก `เครื่องสุ่มหวย.html` เป็น **Vite + JavaScript modules + Tailwind CSS v4 + vite-plugin-pwa** เก็บต้นฉบับไว้สำหรับอ้างอิง
+**Vite + TypeScript (strict) + Tailwind CSS + vite-plugin-pwa** ใช้ **Bun** จัดการแพ็กเกจและ lockfile
+
+หน้าตาส่วนสุ่มเลข ข้อความ ปุ่ม ประวัติ และหน้าต่างแชร์อ้างอิงจาก `เครื่องสุ่มหวย.html` โดยตรง เพิ่มส่วน PWA แยกไว้ใต้ประวัติ โดยใช้สไตล์เดิม แสดงสถานะพร้อมใช้งานออฟไลน์ ปุ่มติดตั้ง และปุ่มอัปเดตเมื่อมีเวอร์ชันใหม่
 
 ## เริ่มใช้งาน
 
-ต้องมี Node.js 22.12 ขึ้นไป และ npm
+ใช้ Bun 1.3 ขึ้นไป และ Node.js 22.12 ขึ้นไปสำหรับเครื่องมือ Vite/Playwright
 
 ```bash
-npm ci
-npm run dev
+bun install --frozen-lockfile
+bun run dev
 ```
 
-โหมดพัฒนาไม่มี Service Worker เพื่อไม่ให้แคชรบกวนการแก้โค้ด ทดสอบ PWA ด้วย production build:
+โหมดพัฒนาไม่ลงทะเบียน Service Worker เพื่อป้องกันแคชรบกวนการแก้โค้ด ทดสอบ PWA จาก production build:
 
 ```bash
-npm run build
-npm run preview
+bun run build
+bun run preview
 ```
 
-เปิด URL ที่ Vite แสดง (ปกติ `http://localhost:4173`) ขณะออนไลน์ รอข้อความ **พร้อมใช้งานออฟไลน์** จากนั้นปิดเน็ตและ reload/เปิดแอปใหม่ได้ สุ่มเลข ดูประวัติ สร้าง QR และบันทึกรูป PNG ได้โดยไม่ต้องเรียก CDN หรือ API
+เปิด `http://localhost:4173` ด้วยอินเทอร์เน็ตครั้งแรก และรอข้อความ **พร้อมใช้งานออฟไลน์** จากนั้น reload หรือเปิดแอปใหม่ได้โดยไม่มีอินเทอร์เน็ต ตรวจสถานะได้ที่ DevTools → Application → Service Workers (สถานะ activated) และ Cache Storage
 
-ติดตั้งผ่านปุ่ม “ติดตั้งแอป” ในเบราว์เซอร์ที่รองรับ หรือใช้เมนูติดตั้งของเบราว์เซอร์ สำหรับ iOS ใช้ Safari → แชร์ → เพิ่มไปยังหน้าจอโฮม การแชร์ไปแอปอื่น/คัดลอกภาพขึ้นกับความสามารถและสิทธิ์ของเบราว์เซอร์ มีปุ่มบันทึกรูปเป็นทางเลือก
+สุ่มเลข ดูประวัติ สร้างรูปแชร์ และสร้าง QR ได้ออฟไลน์ ฟอนต์และไลบรารี QR รวมอยู่ใน build ภายใน origin เดียวกัน ไม่โหลด Google Fonts/CDN ระหว่างใช้งาน
+
+ติดตั้งบน Android/คอมพิวเตอร์ผ่านปุ่ม “ติดตั้งแอป” ด้านล่างประวัติเมื่อเบราว์เซอร์พร้อมให้ติดตั้ง หรือผ่านเมนู “ติดตั้งแอป” ของเบราว์เซอร์ ปุ่มจะเปลี่ยนเป็น “ติดตั้งแล้ว” เมื่อติดตั้งสำเร็จ บน iPhone/iPad ใช้ Safari → แชร์ → เพิ่มไปยังหน้าจอโฮม การคัดลอกและแชร์ไปแอปอื่นขึ้นกับสิทธิ์และการรองรับของเบราว์เซอร์ บันทึกรูปด้วยการกดค้างหรือคลิกขวาตาม UI เดิม
 
 ## Deploy
 
-อัปโหลดโฟลเดอร์ `dist/` ไป static hosting ที่ใช้ **HTTPS** (หรือใช้ localhost เพื่อพัฒนา) การเปิดไฟล์ด้วย `file://` ไม่สามารถติดตั้ง Service Worker ได้ และการเปิดผ่าน HTTP บน LAN ไม่รองรับ PWA
+นำไฟล์ใน `dist/` ขึ้น static hosting ที่ใช้ **HTTPS** หรือใช้ localhost เพื่อทดสอบ การเปิดไฟล์ด้วย `file://` หรือ HTTP บน LAN ไม่สามารถลงทะเบียน Service Worker ได้
 
-หากใช้ subdirectory เช่น `https://example.com/lottery/`:
+สำหรับ subdirectory เช่น `https://example.com/lottery/`:
 
 ```bash
-npm run build -- --base=/lottery/
+bun run build --base=/lottery/
 ```
 
-วางไฟล์ใน `dist/` ใต้ `/lottery/` และให้ hosting ส่ง `index.html` สำหรับเส้นทางแอป ตรวจว่า `sw.js`/`manifest.webmanifest` เข้าถึงได้จริง และตั้ง `Cache-Control: no-cache` ให้ `sw.js` กับ `index.html`; ไฟล์ hash ใต้ `assets/` ใช้ long-lived immutable cache ได้ QR ในรูปแชร์จะชี้ URL ฐานของแอปที่กำลังเปิดอยู่ ไม่ใช้ URL ของต้นฉบับ
+วางไฟล์ใน `dist/` ใต้ `/lottery/` ตรวจว่า `sw.js` กับ `manifest.webmanifest` เข้าถึงได้จริง ตั้ง `Cache-Control: no-cache` สำหรับ `index.html` และ `sw.js` ส่วนไฟล์ hash ใน `assets/` ใช้ long-lived immutable cache ได้ QR ในรูปแชร์ชี้ไป URL ฐานของแอปที่กำลังเปิดอยู่
 
-เมื่อ deploy เวอร์ชันใหม่ แอปแจ้งปุ่ม “อัปเดตแอป” ผู้ใช้เลือกอัปเดตเอง และปุ่มจะถูกปิดระหว่างสุ่ม จึงไม่โหลดหน้าใหม่กลางการสุ่ม แอปตรวจเวอร์ชันเมื่อกลับมาหน้าแอปหรือกลับมาออนไลน์
+ตรวจเวอร์ชันเมื่อเปิดแอป กลับมาออนไลน์ หรือกลับมาที่แท็บ เมื่อมีเวอร์ชันใหม่จะแสดงปุ่ม “อัปเดตแอป” ปุ่มถูกปิดระหว่างสุ่มเพื่อไม่ให้โหลดหน้าซ้ำกลางการสุ่ม หากไม่ได้กดอัปเดต เวอร์ชันใหม่จะรอจนปิดหน้าต่าง/แท็บแอปทั้งหมดแล้วเปิดใหม่
 
-## Atomic Design
+## โครงสร้าง Atomic Design
 
 ```text
 src/
   components/
-    atoms/       Button, Digit, Toast
-    molecules/   StepGuide, NumberDisplay, HistoryRow
+    atoms/       Button, Toast
+    molecules/   StepGuide
     organisms/   LotteryTicket, HistoryPanel, ShareDialog, PwaStatus
     templates/   AppLayout
-  pages/         LotteryPage: ประกอบหน้าจอและจัดการ interaction
-  domain/        lottery: กติกาสุ่ม, ลำดับรอบ, ตรวจข้อมูล
-  services/      storage, share-card: localStorage และ Canvas/QR
-  pwa/           ลงทะเบียน Service Worker และวงจรอัปเดต
-  styles.css     Tailwind theme, base และปุ่มที่ใช้ร่วมกัน
-public/icons/    ไอคอนติดตั้ง, maskable, Apple touch icon
+  pages/         LotteryPage: พฤติกรรมและการ render แบบเดิม
+  domain/        lottery: types, กติกาสุ่ม, ตรวจข้อมูลที่บันทึก
+  services/      share-card: Canvas และ QR แบบเดิม
+  pwa/           ลงทะเบียน Service Worker และเชื่อมสถานะ PWA
+  main.ts        จุดเริ่มแอปและโหลดฟอนต์ภายในเครื่อง
+  styles.css     CSS ต้นฉบับ + Tailwind โดยไม่ใช้ preflight/reset
+public/icons/    ไอคอนติดตั้ง, maskable และ Apple touch icon
 ```
 
-UI ใช้ Tailwind utilities; CSS ส่วนกลางมีเฉพาะ theme, base, dark mode, reduced motion และปุ่มที่ใช้ร่วมกัน ฟอนต์จาก Fontsource และ QR จาก npm ถูกรวมใน build และ precache ภายใน origin เดียวกัน
+เก็บ CSS ต้นฉบับเพื่อรักษาหน้าตาเดิม ใช้ Tailwind `@apply` สำหรับโครงสร้างที่ให้ค่า CSS เท่าเดิม และไม่เปิด preflight ซึ่งจะเปลี่ยนค่าเริ่มต้นของหน้า
 
-## ข้อมูลและพฤติกรรม
+## ข้อมูลในเครื่อง
 
-- สุ่ม 2 → 3 → 6 ตัวด้วย `crypto.getRandomValues` และ rejection sampling เพื่อไม่ให้เกิด modulo bias เก็บศูนย์นำหน้าเป็น string
-- เก็บประวัติ 30 รายการล่าสุด กดรายการเพื่อสร้างรูปย้อนหลังได้ รูปแชร์มี 5 ธีม
-- ย้อนกลับ/รีเซ็ตลำดับโดยคงประวัติ และล้างประวัติแยกได้
-- ใช้ localStorage key เดิม `lotto-random-v1` เพื่ออ่านข้อมูลเดิมได้ **เมื่ออยู่ origin เดียวกัน** ข้อมูลจากไฟล์ `file://` หรือคนละ origin ไม่ย้ายข้ามอัตโนมัติ
-- ตรวจข้อมูลที่โหลดและรองรับ localStorage เสียหาย/ถูกปิด หากบันทึกไม่ได้จะแจ้งผู้ใช้และทำงานในหน่วยความจำ
-- ประวัติและแคชอยู่ในอุปกรณ์/เบราว์เซอร์นี้ การล้างข้อมูลเว็บหรือการลบแคชโดยระบบอาจทำให้ต้องเปิดออนไลน์ใหม่
-- สุ่มเพื่อความบันเทิง ผลไม่เกี่ยวกับสลากจริง
+ใช้ localStorage key เดิม `lotto-random-v1` เพื่ออ่านประวัติเดิมเมื่ออยู่ origin เดียวกัน เก็บ 30 รายการล่าสุด พร้อมศูนย์นำหน้า การเปิดคนละ origin หรือย้ายจาก `file://` ไม่ย้ายประวัติอัตโนมัติ การล้างข้อมูลเว็บไซต์อาจลบทั้งประวัติและแคช ต้องเปิดออนไลน์ใหม่เพื่อเตรียมออฟไลน์
 
-## ทดสอบ
+## ตรวจสอบ
 
 ```bash
-npm test
-npx playwright install chromium   # ครั้งแรกหากยังไม่มี browser
-npm run build
-npm run test:e2e
+bun run typecheck
+bun run test
+bunx playwright install chromium  # ครั้งแรกหากยังไม่มี browser
+bun run build
+bun run test:e2e
 ```
 
-หากต้องใช้ Chromium ที่มีอยู่แล้ว กำหนด `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` เป็น path ของ executable ก่อนรัน E2E ได้
+หากใช้ Chrome/Chromium ที่ติดตั้งไว้แล้ว ตั้ง `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` เป็น path ของ executable ได้
 
-Unit tests ครอบคลุมวงจรสุ่ม ศูนย์นำหน้า ย้อนกลับ รีเซ็ต ขีดจำกัดประวัติ การอ่านข้อมูลเก่า/ข้อมูลเสีย และ rejection sampling ส่วน Playwright ใช้ production preview ตรวจ manifest/icons, ปิดเน็ตแล้ว reload/เปิดหน้าใหม่, สุ่มทุกขนาด, บันทึก/คืนประวัติ, สร้างและดาวน์โหลดรูปทุกธีม, จอเล็ก, dark mode, reduced motion และป้องกันกดสุ่มซ้ำระหว่าง animation
+- Unit tests: วงจร 2 → 3 → 6, ศูนย์นำหน้า, ย้อนกลับ/รีเซ็ต, ขีดจำกัดประวัติ, ข้อมูลเสีย และ rejection sampling
+- Browser tests: production Service Worker, ปิดเน็ตแล้ว reload/เปิดใหม่, สุ่มทุกขนาด, ประวัติ, รูปแชร์ 5 ธีม กรณี storage ใช้ไม่ได้ และวงจรปุ่มติดตั้ง
+- Visual regression: เปรียบเทียบ screenshot กับ HTML ต้นฉบับโดยใช้ฟอนต์เดียวกัน ที่ความกว้าง 390/1280 px ทั้ง light/dark mode โดยแยกส่วน PWA ออกจากการเปรียบเทียบกับต้นฉบับ
 
-เอกสารอ้างอิง: [Vite PWA](https://vite-pwa-org.netlify.app/guide/) · [Tailwind CSS with Vite](https://tailwindcss.com/docs/installation/using-vite)
-# lottery-random
+เอกสาร: [Vite PWA](https://vite-pwa-org.netlify.app/guide/) · [Bun TypeScript](https://bun.sh/docs/runtime/typescript) · [Tailwind CSS](https://tailwindcss.com/docs/installation/using-vite)
