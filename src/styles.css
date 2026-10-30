@@ -42,6 +42,7 @@ img {
   --cell: #f1f4fa;
   --accent: #c4122f;
   --accent-ink: #ffffff;
+  --warning: #fff6c4;
   --font-display: "Mitr", "Noto Sans Thai", system-ui, sans-serif;
   --font-body:
     "Noto Sans Thai", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -58,6 +59,7 @@ img {
     --cell: #0e1527;
     --accent: #ff5470;
     --accent-ink: #1a0710;
+    --warning: #fff6c4;
     color-scheme: dark;
   }
 }
@@ -70,6 +72,7 @@ img {
   --cell: #0e1527;
   --accent: #ff5470;
   --accent-ink: #1a0710;
+  --warning: #fff6c4;
   color-scheme: dark;
 }
 
@@ -99,7 +102,21 @@ body {
   align-items: center;
   justify-content: space-between;
 }
-.header-title .ghost {
+.header-title .group-update {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.update {
+  font-size: 12px;
+  color: #1a0710;
+  background: var(--warning);
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.group-update .ghost {
+  color: #111a2e;
   background-color: white;
   font-weight: 600;
   line-height: normal;
@@ -427,6 +444,13 @@ h1 {
   flex-direction: row;
   align-items: center;
 }
+
+@media screen and (min-width: 576px) {
+  .sheet-body p {
+    min-width: 100px;
+  }
+}
+
 .info {
   margin: 0px 0px 5px 0px;
 }
