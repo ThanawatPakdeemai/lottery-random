@@ -204,7 +204,7 @@ export function renderCard(
   timeText: string,
   themeIdx: number,
   deity?: HTMLImageElement | null,
-  border = true,
+  preview = true,
 ) {
   var S = 2,
     W = 1080,
@@ -224,15 +224,15 @@ export function renderCard(
   var L = 80,
     R = W - 80;
 
-  // outside the card: white for the wording themes, transparent once a deity picture is on
-  if (!deity) {
-    ctx.fillStyle = "#ffffff";
+  // preview: grey page around the card with a grey border; saved/shared file: transparent outside, no border
+  if (preview) {
+    ctx.fillStyle = cssVar("--bg");
     ctx.fillRect(0, 0, W, H);
   }
   roundRect(ctx, 28, 28, W - 56, H - 56, 28);
   ctx.fillStyle = panel;
   ctx.fill();
-  if (border) {
+  if (preview) {
     ctx.lineWidth = 3;
     ctx.strokeStyle = line;
     ctx.stroke();

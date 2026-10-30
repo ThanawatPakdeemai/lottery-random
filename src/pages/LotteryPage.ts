@@ -351,7 +351,7 @@ export function LotteryPage(root: HTMLElement): void {
 
   var shareFile: File | null = null;
   var shareUrl: string | null = null;
-  // With a deity picture the preview keeps the grey card border, the saved/shared file drops it
+  // The preview shows the grey page and border; the saved/shared file has them transparent
   var previewUrl: string | null = null;
   var shareGeneration = 0;
 
@@ -465,14 +465,14 @@ export function LotteryPage(root: HTMLElement): void {
     try {
       const [, deity] = await Promise.all([loadFonts(), loadDeity(deityIdx)]);
       if (generation !== shareGeneration || shade.hidden) return;
-      const toPng = async (border: boolean) => {
+      const toPng = async (preview: boolean) => {
         const canvas = renderCard(
           state.value,
           state.ts,
           state.timeText,
           theme,
           deity,
-          border,
+          preview,
         );
         const blob = await new Promise<Blob | null>((resolve) =>
           canvas.toBlob(resolve, "image/png"),
@@ -481,18 +481,18 @@ export function LotteryPage(root: HTMLElement): void {
         if (!blob) throw new Error("Unable to encode PNG");
         return blob;
       };
-      const blob = await toPng(!deity);
-      const previewBlob = deity ? await toPng(true) : null;
+      const blob = await toPng(false);
+      const previewBlob = await toPng(true);
       if (generation !== shareGeneration || shade.hidden) return;
       const nextUrl = URL.createObjectURL(blob);
       if (shareUrl) URL.revokeObjectURL(shareUrl);
       shareUrl = nextUrl;
       if (previewUrl) URL.revokeObjectURL(previewUrl);
-      previewUrl = previewBlob ? URL.createObjectURL(previewBlob) : null;
+      previewUrl = URL.createObjectURL(previewBlob);
       shareFile = new File([blob], `lotto-${state.value}.png`, {
         type: "image/png",
       });
-      shareImg.src = previewUrl || shareUrl;
+      shareImg.src = previewUrl;
       shareSave.disabled = false;
       shareNative.disabled = false;
     } catch {
