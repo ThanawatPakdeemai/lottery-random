@@ -204,6 +204,7 @@ export function renderCard(
   timeText: string,
   themeIdx: number,
   deity?: HTMLImageElement | null,
+  border = true,
 ) {
   var S = 2,
     W = 1080,
@@ -223,13 +224,19 @@ export function renderCard(
   var L = 80,
     R = W - 80;
 
-  // outside the card stays transparent (no page background), so only the card shows in the PNG
+  // outside the card: white for the wording themes, transparent once a deity picture is on
+  if (!deity) {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, W, H);
+  }
   roundRect(ctx, 28, 28, W - 56, H - 56, 28);
   ctx.fillStyle = panel;
   ctx.fill();
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = line;
-  ctx.stroke();
+  if (border) {
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = line;
+    ctx.stroke();
+  }
 
   if (deity) drawDeity(ctx, W, H, deity);
   // themeIdx -1: no wording, plain card

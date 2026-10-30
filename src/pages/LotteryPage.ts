@@ -351,6 +351,8 @@ export function LotteryPage(root: HTMLElement): void {
 
   var shareFile: File | null = null;
   var shareUrl: string | null = null;
+  // With a deity picture the preview keeps the grey card border, the saved/shared file drops it
+  var previewUrl: string | null = null;
   var shareGeneration = 0;
 
   var THEME_COUNT = 5;
@@ -394,6 +396,8 @@ export function LotteryPage(root: HTMLElement): void {
     shareFile = null;
     if (shareUrl) URL.revokeObjectURL(shareUrl);
     shareUrl = null;
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = null;
     shareImg.removeAttribute("src");
     if (shareOpener && document.body.contains(shareOpener)) shareOpener.focus();
   }
@@ -461,26 +465,34 @@ export function LotteryPage(root: HTMLElement): void {
     try {
       const [, deity] = await Promise.all([loadFonts(), loadDeity(deityIdx)]);
       if (generation !== shareGeneration || shade.hidden) return;
-      const canvas = renderCard(
-        state.value,
-        state.ts,
-        state.timeText,
-        theme,
-        deity,
-      );
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, "image/png"),
-      );
-      canvas.width = canvas.height = 0;
+      const toPng = async (border: boolean) => {
+        const canvas = renderCard(
+          state.value,
+          state.ts,
+          state.timeText,
+          theme,
+          deity,
+          border,
+        );
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, "image/png"),
+        );
+        canvas.width = canvas.height = 0;
+        if (!blob) throw new Error("Unable to encode PNG");
+        return blob;
+      };
+      const blob = await toPng(!deity);
+      const previewBlob = deity ? await toPng(true) : null;
       if (generation !== shareGeneration || shade.hidden) return;
-      if (!blob) throw new Error("Unable to encode PNG");
       const nextUrl = URL.createObjectURL(blob);
       if (shareUrl) URL.revokeObjectURL(shareUrl);
       shareUrl = nextUrl;
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = previewBlob ? URL.createObjectURL(previewBlob) : null;
       shareFile = new File([blob], `lotto-${state.value}.png`, {
         type: "image/png",
       });
-      shareImg.src = shareUrl;
+      shareImg.src = previewUrl || shareUrl;
       shareSave.disabled = false;
       shareNative.disabled = false;
     } catch {
