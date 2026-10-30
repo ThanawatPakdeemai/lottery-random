@@ -493,6 +493,9 @@ export function LotteryPage(root: HTMLElement): void {
         type: "image/png",
       });
       shareImg.src = previewUrl;
+      // wait until the new picture is ready to paint
+      await shareImg.decode().catch(function () {});
+      if (generation !== shareGeneration || shade.hidden) return;
       shareSave.disabled = false;
       shareNative.disabled = false;
     } catch {
