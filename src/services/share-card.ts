@@ -1,5 +1,5 @@
-import qrcode from 'qrcode-generator';
-import { MODES, fmtWhen } from '../domain/lottery';
+import qrcode from "qrcode-generator";
+import { MODES, fmtWhen } from "../domain/lottery";
 const APP_URL = new URL(import.meta.env.BASE_URL, window.location.origin).href;
 
 function cssVar(name: string) {
@@ -21,7 +21,14 @@ export function loadFonts() {
   ]).catch(function () {});
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -89,9 +96,74 @@ var WM_LAYOUTS = [
   ],
 ];
 
+// Background pictures for deity themes 1-8 (files in public/deity, numbered by the suffix)
+var DEITY_FILES = [
+  "Ivory-Gold Hindu Deity Quartet-1.avif",
+  "Caishen red-gold fortune card-2.avif",
+  "Centered Guanyin in Peach Orchard-3.avif",
+  "Centered Guan Yu with Guandao and Tiger-4.avif",
+  "Serene Lakshmi on a Lotus-5.avif",
+  "Centered Ivory Ganesha with Golden Halo-6.avif",
+  "Ivory Gold Trimurti Sculpture-7.avif",
+  "Serene Uma with Lotus and Blessing-8.avif",
+  "Guanyin blessing amid heavenly peach blossoms-1.avif",
+  "Emerald Thai Naga in Graceful Profile.avif",
+  "Gilded Ai Khai Temple Blessing.avif",
+  "Luminous Porcelain Lucky Cat.avif",
+];
+export var DEITY_COUNT = DEITY_FILES.length;
+var deityCache: Record<number, Promise<HTMLImageElement>> = {};
+
+// Load (once) the picture for a deity theme; -1 means no picture
+export function loadDeity(idx: number): Promise<HTMLImageElement | null> {
+  if (idx < 0 || idx >= DEITY_FILES.length) return Promise.resolve(null);
+  if (!deityCache[idx]) {
+    deityCache[idx] = new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.onload = function () {
+        resolve(img);
+      };
+      img.onerror = function () {
+        delete deityCache[idx];
+        reject(new Error("Unable to load deity image"));
+      };
+      img.src =
+        import.meta.env.BASE_URL +
+        "deity/" +
+        encodeURIComponent(DEITY_FILES[idx]);
+    });
+  }
+  return deityCache[idx];
+}
+
+// Picture filling the whole white card frame (cover, centred), clipped to its rounded corners
+function drawDeity(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  img: HTMLImageElement,
+) {
+  var fw = W - 56,
+    fh = H - 56;
+  var k = Math.max(fw / img.naturalWidth, fh / img.naturalHeight);
+  var w = img.naturalWidth * k,
+    h = img.naturalHeight * k;
+  ctx.save();
+  roundRect(ctx, 28, 28, fw, fh, 28);
+  ctx.clip();
+  ctx.globalAlpha = 0.5;
+  ctx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+  ctx.restore();
+}
 
 // Large, faint, tilted wording behind the content. Clamped and clipped so it stays inside the card frame.
-function drawWatermark(ctx: CanvasRenderingContext2D, W: number, H: number, themeIdx: number, color: string) {
+function drawWatermark(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  themeIdx: number,
+  color: string,
+) {
   var phrase = PHRASES[themeIdx] || PHRASES[0];
   var spots = WM_LAYOUTS[themeIdx] || WM_LAYOUTS[0];
   var pad = 44;
@@ -110,24 +182,13 @@ function drawWatermark(ctx: CanvasRenderingContext2D, W: number, H: number, them
       h = size * 1.25;
     var bw = Math.abs(w * Math.cos(ang)) + h * Math.abs(Math.sin(ang));
     var bh = Math.abs(w * Math.sin(ang)) + h * Math.abs(Math.cos(ang));
-    var k = Math.min(
-      1,
-      (W - 2 * pad) / bw,
-      (H - 2 * pad) / bh,
-      680 / w,
-    );
+    var k = Math.min(1, (W - 2 * pad) / bw, (H - 2 * pad) / bh, 680 / w);
     size = Math.floor(size * k);
     bw *= k;
     bh *= k;
     ctx.font = "600 " + size + 'px Mitr, "Noto Sans Thai", sans-serif';
-    var x = Math.min(
-      Math.max(s[0] * W, pad + bw / 2),
-      W - pad - bw / 2,
-    );
-    var y = Math.min(
-      Math.max(s[1] * H, pad + bh / 2),
-      H - pad - bh / 2,
-    );
+    var x = Math.min(Math.max(s[0] * W, pad + bw / 2), W - pad - bw / 2);
+    var y = Math.min(Math.max(s[1] * H, pad + bh / 2), H - pad - bh / 2);
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(ang);
@@ -137,7 +198,13 @@ function drawWatermark(ctx: CanvasRenderingContext2D, W: number, H: number, them
   ctx.restore();
 }
 
-export function renderCard(value: string, ts: number, timeText: string, themeIdx: number) {
+export function renderCard(
+  value: string,
+  ts: number,
+  timeText: string,
+  themeIdx: number,
+  deity?: HTMLImageElement | null,
+) {
   var S = 2,
     W = 1080,
     H = 720;
@@ -166,6 +233,7 @@ export function renderCard(value: string, ts: number, timeText: string, themeIdx
   ctx.strokeStyle = line;
   ctx.stroke();
 
+  if (deity) drawDeity(ctx, W, H, deity);
   drawWatermark(ctx, W, H, themeIdx || 0, accent);
 
   // top left: title, top right: date and time of the draw
@@ -200,7 +268,10 @@ export function renderCard(value: string, ts: number, timeText: string, themeIdx
     var x = x0 + i * (bw + gap);
     roundRect(ctx, x, cy - bh / 2, bw, bh, 18);
     ctx.fillStyle = cellBg;
+    // with a deity picture the boxes are see-through so they don't hide it
+    ctx.globalAlpha = deity ? 0.25 : 1;
     ctx.fill();
+    ctx.globalAlpha = 1;
     ctx.lineWidth = 4;
     ctx.strokeStyle = accent;
     ctx.stroke();
@@ -225,8 +296,7 @@ export function renderCard(value: string, ts: number, timeText: string, themeIdx
     MODES.filter(function (m) {
       return m.n === n;
     })[0] || MODES[0];
-  var label =
-    "เลข " + n + " ตัว (" + mode.range.replace("–", "-") + ")";
+  var label = "เลข " + n + " ตัว (" + mode.range.replace("–", "-") + ")";
   var blessing = "- ขอให้เฮง ขอให้รวย ขอให้หวยถูก";
   var availW = R - 150 - 40 - L;
   ctx.textAlign = "left";
@@ -274,12 +344,7 @@ export function renderCard(value: string, ts: number, timeText: string, themeIdx
     for (var r = 0; r < cnt; r++) {
       for (var c = 0; c < cnt; c++) {
         if (qr.isDark(r, c))
-          ctx.fillRect(
-            qx + 10 + c * cs,
-            qy + 10 + r * cs,
-            cs + 0.6,
-            cs + 0.6,
-          );
+          ctx.fillRect(qx + 10 + c * cs, qy + 10 + r * cs, cs + 0.6, cs + 0.6);
       }
     }
   }

@@ -1,5 +1,5 @@
 import { AppLayout } from '../components/templates/AppLayout';
-import { loadFonts, renderCard } from '../services/share-card';
+import { DEITY_COUNT, loadDeity, loadFonts, renderCard } from '../services/share-card';
 import { MODES, normalizeState, randomDigit, completeDraw, back, reset, fmtWhen, type HistoryEntry } from '../domain/lottery';
 
 export function LotteryPage(root: HTMLElement): void {
@@ -325,6 +325,7 @@ export function LotteryPage(root: HTMLElement): void {
 
   var THEME_COUNT = 5;
   var shareTheme = 0;
+  var shareDeity = -1;
   var cardState: { value: string; ts: number; timeText: string } | null = null;
 
   var shareOpener: HTMLElement | null = null;
@@ -334,6 +335,7 @@ export function LotteryPage(root: HTMLElement): void {
     if (busy) return;
     shareOpener = opener;
     shareTheme = 0;
+    shareDeity = -1;
     syncThemeButtons();
     cardState = { value, ts, timeText };
     const when = fmtWhen({ ts, time: timeText });
@@ -380,9 +382,32 @@ export function LotteryPage(root: HTMLElement): void {
     })(ti);
   }
 
+  // Deity picture buttons 1-8: pressing the chosen one again removes the picture
+  var deityBtns: HTMLButtonElement[] = [];
+  var deityEl = element("deityThemes");
+  for (var di = 0; di < DEITY_COUNT; di++) {
+    (function (i) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "theme-btn";
+      b.textContent = String(i + 1);
+      b.setAttribute("aria-label", "ธีมรูปสิ่งศักดิ์สิทธิ์ " + (i + 1));
+      b.addEventListener("click", function () {
+        shareDeity = shareDeity === i ? -1 : i;
+        syncThemeButtons();
+        repaintTheme();
+      });
+      deityEl.appendChild(b);
+      deityBtns.push(b);
+    })(di);
+  }
+
   function syncThemeButtons() {
     themeBtns.forEach(function (b, i) {
       b.setAttribute("aria-pressed", i === shareTheme ? "true" : "false");
+    });
+    deityBtns.forEach(function (b, i) {
+      b.setAttribute("aria-pressed", i === shareDeity ? "true" : "false");
     });
   }
 
@@ -391,15 +416,16 @@ export function LotteryPage(root: HTMLElement): void {
     if (!cardState) return;
     const state = cardState;
     const theme = shareTheme;
+    const deityIdx = shareDeity;
     const generation = ++shareGeneration;
     shareFile = null;
     shareSave.disabled = true;
     shareNative.disabled = true;
     shareImg.setAttribute("aria-busy", "true");
     try {
-      await loadFonts();
+      const [, deity] = await Promise.all([loadFonts(), loadDeity(deityIdx)]);
       if (generation !== shareGeneration || shade.hidden) return;
-      const canvas = renderCard(state.value, state.ts, state.timeText, theme);
+      const canvas = renderCard(state.value, state.ts, state.timeText, theme, deity);
       const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png"));
       canvas.width = canvas.height = 0;
       if (generation !== shareGeneration || shade.hidden) return;
