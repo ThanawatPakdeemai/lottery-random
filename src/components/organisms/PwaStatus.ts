@@ -47,7 +47,7 @@ export function connectPwaStatus() {
   let updater: (() => Promise<void>) | undefined;
 
   function render(): void {
-    const network = navigator.onLine ? "ออนไลน์" : "ออฟไลน์";
+    const network = navigator.onLine ? "🟢" : "🔴";
     message.textContent =
       issue ||
       `${network} · ${ready ? "พร้อมใช้งานออฟไลน์" : "กำลังเตรียมใช้งานออฟไลน์…"}${waiting ? " · มีเวอร์ชันใหม่" : ""}`;
