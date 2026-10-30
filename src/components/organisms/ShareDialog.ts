@@ -14,12 +14,21 @@ export function ShareDialog(): string {
         </div>
         <img id="shareImg" alt="รูปผลการสุ่มหวย" width="1080" height="720" />
         <div class="sheet-body">
-          <p class="text-sm text-muted">ธีมแชร์รูป</p>
+          <p class="text-sm text-muted">ธีมข้อความ</p>
           <div
             class="themes"
             id="themes"
             role="group"
             aria-label="เลือกธีม"
+          ></div>
+        </div>
+        <div class="sheet-body">
+          <p class="text-sm text-muted">ธีมรูปสิ่งศักดิ์สิทธิ์</p>
+          <div
+            class="themes"
+            id="deityThemes"
+            role="group"
+            aria-label="เลือกธีมรูปสิ่งศักดิ์สิทธิ์"
           ></div>
         </div>
         <p id="shareInfo" class="info my-3 text-sm text-muted"></p>
