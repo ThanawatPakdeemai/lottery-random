@@ -1,6 +1,20 @@
-import { AppLayout } from '../components/templates/AppLayout';
-import { DEITY_COUNT, loadDeity, loadFonts, renderCard } from '../services/share-card';
-import { MODES, normalizeState, randomDigit, completeDraw, back, reset, fmtWhen, type HistoryEntry } from '../domain/lottery';
+import { AppLayout } from "../components/templates/AppLayout";
+import {
+  DEITY_COUNT,
+  loadDeity,
+  loadFonts,
+  renderCard,
+} from "../services/share-card";
+import {
+  MODES,
+  normalizeState,
+  randomDigit,
+  completeDraw,
+  back,
+  reset,
+  fmtWhen,
+  type HistoryEntry,
+} from "../domain/lottery";
 
 export function LotteryPage(root: HTMLElement): void {
   root.innerHTML = AppLayout();
@@ -59,9 +73,13 @@ export function LotteryPage(root: HTMLElement): void {
 
   function load(): void {
     try {
-      const saved = normalizeState(JSON.parse(localStorage.getItem(STORE_KEY) || 'null'));
+      const saved = normalizeState(
+        JSON.parse(localStorage.getItem(STORE_KEY) || "null"),
+      );
       ({ step, rounds, history, lastValue, lastTs } = saved);
-    } catch { /* Private browsing or damaged storage: keep the initial state. */ }
+    } catch {
+      /* Private browsing or damaged storage: keep the initial state. */
+    }
   }
 
   function restoreLast() {
@@ -78,22 +96,25 @@ export function LotteryPage(root: HTMLElement): void {
       "</strong> · เลข " +
       h.n +
       " ตัว · ผลล่าสุด";
-    metaRight.textContent = MODES[h.idx - 1]
-      ? MODES[h.idx - 1].range
-      : "";
+    metaRight.textContent = MODES[h.idx - 1] ? MODES[h.idx - 1].range : "";
     display.setAttribute("aria-label", "ผลการสุ่ม " + lastValue);
     display.setAttribute("aria-busy", "false");
     copyBtn.disabled = false;
   }
 
   // Uniform random digit 0-9 (rejection sampling avoids modulo bias)
-  function rnd10(): number { return Number(randomDigit()); }
+  function rnd10(): number {
+    return Number(randomDigit());
+  }
 
   function setCells(n: number, idle: boolean) {
     display.innerHTML = "";
     display.style.setProperty("--n", String(n));
     display.setAttribute("data-n", String(n));
-    display.setAttribute("aria-label", idle ? "ยังไม่ได้สุ่ม" : `กำลังสุ่มเลข ${n} ตัว ...`);
+    display.setAttribute(
+      "aria-label",
+      idle ? "ยังไม่ได้สุ่ม" : `กำลังสุ่มเลข ${n} ตัว ...`,
+    );
     display.setAttribute("aria-busy", String(!idle));
     for (var i = 0; i < n; i++) {
       var c = document.createElement("span");
@@ -263,7 +284,10 @@ export function LotteryPage(root: HTMLElement): void {
     renderButton();
 
     spin(digits).then(function () {
-      const next = completeDraw({ step, rounds, history, lastValue, lastTs }, value);
+      const next = completeDraw(
+        { step, rounds, history, lastValue, lastTs },
+        value,
+      );
       ({ step, rounds, history, lastValue, lastTs } = next);
       display.setAttribute("aria-label", "ผลการสุ่ม " + value);
       display.setAttribute("aria-busy", "false");
@@ -305,7 +329,13 @@ export function LotteryPage(root: HTMLElement): void {
   // Restart the cycle at ครั้งที่ 1 (2 digits); history stays
   function resetCycle() {
     if (busy) return;
-    ({ step, rounds, history, lastValue, lastTs } = reset({ step, rounds, history, lastValue, lastTs }));
+    ({ step, rounds, history, lastValue, lastTs } = reset({
+      step,
+      rounds,
+      history,
+      lastValue,
+      lastTs,
+    }));
     setCells(MODES[0].n, true);
     metaLeft.innerHTML = "<strong>พร้อมสุ่ม</strong>";
     metaRight.textContent = MODES[0].range;
@@ -321,6 +351,8 @@ export function LotteryPage(root: HTMLElement): void {
 
   var shareFile: File | null = null;
   var shareUrl: string | null = null;
+  // The preview shows the grey page and border; the saved/shared file has them transparent
+  var previewUrl: string | null = null;
   var shareGeneration = 0;
 
   var THEME_COUNT = 5;
@@ -331,16 +363,23 @@ export function LotteryPage(root: HTMLElement): void {
   var shareOpener: HTMLElement | null = null;
 
   // Build the image for one draw and show it in the sheet
-  function openCard(value: string, ts: number, timeText: string, opener: HTMLElement | null) {
+  function openCard(
+    value: string,
+    ts: number,
+    timeText: string,
+    opener: HTMLElement | null,
+  ) {
     if (busy) return;
     shareOpener = opener;
-    shareTheme = 0;
-    shareDeity = -1;
+    shareTheme = -1;
+    shareDeity = 0;
     syncThemeButtons();
     cardState = { value, ts, timeText };
     const when = fmtWhen({ ts, time: timeText });
     const timestamp = [when.date, when.time].filter(Boolean).join(" ");
-    shareInfo.textContent = [`เลข ${value.length} ตัว`, timestamp].filter(Boolean).join(" · ");
+    shareInfo.textContent = [`เลข ${value.length} ตัว`, timestamp]
+      .filter(Boolean)
+      .join(" · ");
     shade.hidden = false;
     shareClose.focus();
     void repaintTheme();
@@ -357,11 +396,13 @@ export function LotteryPage(root: HTMLElement): void {
     shareFile = null;
     if (shareUrl) URL.revokeObjectURL(shareUrl);
     shareUrl = null;
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = null;
     shareImg.removeAttribute("src");
     if (shareOpener && document.body.contains(shareOpener)) shareOpener.focus();
   }
 
-  // Theme buttons 1-5: numbers only; the chosen one is filled red
+  // Theme buttons 1-5: numbers only; the chosen one is filled red, pressing it again removes the wording
   var themeBtns: HTMLButtonElement[] = [];
   var themesEl = element("themes");
   for (var ti = 0; ti < THEME_COUNT; ti++) {
@@ -372,8 +413,7 @@ export function LotteryPage(root: HTMLElement): void {
       b.textContent = String(i + 1);
       b.setAttribute("aria-label", "ธีม " + (i + 1));
       b.addEventListener("click", function () {
-        if (shareTheme === i) return;
-        shareTheme = i;
+        shareTheme = shareTheme === i ? -1 : i;
         syncThemeButtons();
         repaintTheme();
       });
@@ -425,22 +465,45 @@ export function LotteryPage(root: HTMLElement): void {
     try {
       const [, deity] = await Promise.all([loadFonts(), loadDeity(deityIdx)]);
       if (generation !== shareGeneration || shade.hidden) return;
-      const canvas = renderCard(state.value, state.ts, state.timeText, theme, deity);
-      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png"));
-      canvas.width = canvas.height = 0;
+      const toPng = async (preview: boolean) => {
+        const canvas = renderCard(
+          state.value,
+          state.ts,
+          state.timeText,
+          theme,
+          deity,
+          preview,
+        );
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, "image/png"),
+        );
+        canvas.width = canvas.height = 0;
+        if (!blob) throw new Error("Unable to encode PNG");
+        return blob;
+      };
+      const blob = await toPng(false);
+      const previewBlob = await toPng(true);
       if (generation !== shareGeneration || shade.hidden) return;
-      if (!blob) throw new Error("Unable to encode PNG");
       const nextUrl = URL.createObjectURL(blob);
       if (shareUrl) URL.revokeObjectURL(shareUrl);
       shareUrl = nextUrl;
-      shareFile = new File([blob], `lotto-${state.value}.png`, { type: "image/png" });
-      shareImg.src = shareUrl;
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = URL.createObjectURL(previewBlob);
+      shareFile = new File([blob], `lotto-${state.value}.png`, {
+        type: "image/png",
+      });
+      shareImg.src = previewUrl;
+      // wait until the new picture is ready to paint
+      await shareImg.decode().catch(function () {});
+      if (generation !== shareGeneration || shade.hidden) return;
       shareSave.disabled = false;
       shareNative.disabled = false;
     } catch {
-      if (generation === shareGeneration && !shade.hidden) toast("สร้างรูปไม่สำเร็จ กรุณาลองใหม่");
+      if (generation === shareGeneration && !shade.hidden)
+        toast("สร้างรูปไม่สำเร็จ กรุณาลองใหม่");
     } finally {
-      if (generation === shareGeneration) shareImg.setAttribute("aria-busy", "false");
+      if (generation === shareGeneration)
+        shareImg.setAttribute("aria-busy", "false");
     }
   }
   syncThemeButtons();
@@ -465,7 +528,10 @@ export function LotteryPage(root: HTMLElement): void {
   shareNative.addEventListener("click", async function () {
     if (!shareFile) return;
     try {
-      if (!navigator.share || (navigator.canShare && !navigator.canShare({ files: [shareFile] }))) {
+      if (
+        !navigator.share ||
+        (navigator.canShare && !navigator.canShare({ files: [shareFile] }))
+      ) {
         toast("เบราว์เซอร์นี้ไม่รองรับการแชร์รูป กรุณากดบันทึกรูปแทน");
         return;
       }
@@ -483,7 +549,13 @@ export function LotteryPage(root: HTMLElement): void {
   // Step back one digit length so it can be drawn again; history stays
   function goBack() {
     if (busy || (step === 0 && rounds === 0)) return;
-    ({ step, rounds, history, lastValue, lastTs } = back({ step, rounds, history, lastValue, lastTs }));
+    ({ step, rounds, history, lastValue, lastTs } = back({
+      step,
+      rounds,
+      history,
+      lastValue,
+      lastTs,
+    }));
     setCells(MODES[step].n, true);
     metaLeft.innerHTML = "<strong>พร้อมสุ่ม</strong>";
     metaRight.textContent = MODES[step].range;

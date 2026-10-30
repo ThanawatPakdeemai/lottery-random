@@ -476,6 +476,25 @@ h1 {
   border-radius: 10px;
   border: 1px solid var(--line);
 }
+/* "กำลังแสดงข้อมูล..." over the preview only until the first image arrives after opening */
+.share-preview {
+  position: relative;
+}
+.share-loading {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+.share-preview img:not([src]) + .share-loading {
+  display: flex;
+}
 
 .toast {
   position: fixed;
