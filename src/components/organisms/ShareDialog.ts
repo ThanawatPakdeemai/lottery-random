@@ -12,7 +12,10 @@ export function ShareDialog(): string {
           <h2 id="shareTitle">รูปผลการสุ่ม</h2>
           ${Button("shareClose", "ปิด")}
         </div>
-        <img id="shareImg" alt="รูปผลการสุ่มหวย" width="1080" height="720" />
+        <div class="share-preview">
+          <img id="shareImg" alt="รูปผลการสุ่มหวย" width="1080" height="720" />
+          <p class="share-loading" role="status">กำลังแสดงข้อมูล...</p>
+        </div>
         <div class="sheet-body">
           <p class="text-sm text-muted">ธีมข้อความ</p>
           <div

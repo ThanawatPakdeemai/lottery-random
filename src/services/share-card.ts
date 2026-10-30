@@ -99,13 +99,13 @@ var WM_LAYOUTS = [
 // Background pictures for deity themes 1-8 (files in public/deity, numbered by the suffix)
 var DEITY_FILES = [
   "Ivory-Gold Hindu Deity Quartet-1.avif",
-  "Caishen red-gold fortune card-2.avif",
-  "Centered Guanyin in Peach Orchard-3.avif",
-  "Centered Guan Yu with Guandao and Tiger-4.avif",
   "Serene Lakshmi on a Lotus-5.avif",
   "Centered Ivory Ganesha with Golden Halo-6.avif",
   "Ivory Gold Trimurti Sculpture-7.avif",
   "Serene Uma with Lotus and Blessing-8.avif",
+  "Caishen red-gold fortune card-2.avif",
+  "Centered Guanyin in Peach Orchard-3.avif",
+  "Centered Guan Yu with Guandao and Tiger-4.avif",
   "Guanyin blessing amid heavenly peach blossoms-1.avif",
   "Emerald Thai Naga in Graceful Profile.avif",
   "Gilded Ai Khai Temple Blessing.avif",
@@ -136,7 +136,7 @@ export function loadDeity(idx: number): Promise<HTMLImageElement | null> {
   return deityCache[idx];
 }
 
-// Picture filling the whole white card frame (cover, centred), clipped to its rounded corners
+// Picture filling the whole card frame (cover, centred), clipped to its rounded corners
 function drawDeity(
   ctx: CanvasRenderingContext2D,
   W: number,
@@ -204,6 +204,7 @@ export function renderCard(
   timeText: string,
   themeIdx: number,
   deity?: HTMLImageElement | null,
+  preview = true,
 ) {
   var S = 2,
     W = 1080,
@@ -214,8 +215,7 @@ export function renderCard(
   const ctx = cv.getContext("2d");
   if (!ctx) throw new Error("Canvas is not supported");
   ctx.scale(S, S);
-  var bg = cssVar("--bg"),
-    panel = cssVar("--panel"),
+  var panel = cssVar("--panel"),
     ink = cssVar("--ink"),
     muted = cssVar("--muted");
   var line = cssVar("--line"),
@@ -224,17 +224,23 @@ export function renderCard(
   var L = 80,
     R = W - 80;
 
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
+  // preview: grey page around the card with a grey border; saved/shared file: transparent outside, no border
+  if (preview) {
+    ctx.fillStyle = cssVar("--bg");
+    ctx.fillRect(0, 0, W, H);
+  }
   roundRect(ctx, 28, 28, W - 56, H - 56, 28);
   ctx.fillStyle = panel;
   ctx.fill();
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = line;
-  ctx.stroke();
+  if (preview) {
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = line;
+    ctx.stroke();
+  }
 
   if (deity) drawDeity(ctx, W, H, deity);
-  drawWatermark(ctx, W, H, themeIdx || 0, accent);
+  // themeIdx -1: no wording, plain card
+  if (themeIdx >= 0) drawWatermark(ctx, W, H, themeIdx, accent);
 
   // top left: title, top right: date and time of the draw
   ctx.textBaseline = "alphabetic";
