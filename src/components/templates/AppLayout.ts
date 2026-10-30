@@ -7,7 +7,7 @@ import { Toast } from "../atoms/Toast";
 
 export function AppLayout(): string {
   return `<div class="wrap"><header>
-        <div class="header--title">
+        <div class="header-title">
           <h1>เครื่องสุ่มหวย</h1>
           <button class="ghost" id="updateApp" type="button" hidden>อัปเดตแอป</button>
         </div>
