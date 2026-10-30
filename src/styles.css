@@ -94,6 +94,17 @@ body {
   margin-inline: auto;
   @apply grid gap-5;
 }
+.header-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.header-title .ghost {
+  background-color: white;
+  font-weight: 600;
+  line-height: normal;
+  padding: 8px 12px;
+}
 h1 {
   font-family: var(--font-display);
   font-weight: 600;

@@ -10,7 +10,6 @@ export function PwaStatus(): string {
     <p id="pwaMessage" class="note" role="status">กำลังเตรียมใช้งานออฟไลน์…</p>
     <div class="actions">
       ${Button("installApp", "ติดตั้งแอป", true)}
-      <button class="ghost" id="updateApp" type="button" hidden>อัปเดตแอป</button>
     </div>
     <details class="mt-2 text-xs text-muted">
       <summary class="cursor-pointer">วิธีติดตั้งและใช้งานออฟไลน์</summary>
