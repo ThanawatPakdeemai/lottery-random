@@ -9,7 +9,10 @@ export function AppLayout(): string {
   return `<div class="wrap"><header>
         <div class="header-title">
           <h1>เครื่องสุ่มหวย</h1>
-          <button class="ghost" id="updateApp" type="button" hidden>อัปเดตแอป</button>
+          <div class="group-update">
+            <div class="update" id="updateApp"><b>⚠️ มีฟรีเจอร์มาใหม่ โปรดอัปเดต 👉</b></div>
+            <button class="ghost" id="updateApp" type="button" hidden>อัปเดตแอป</button>
+          </div>
         </div>
         <p class="sub">
           กดปุ่มเดียว สุ่มต่อเนื่องเป็นรอบ 2 ตัว → 3 ตัว → 6 ตัว
