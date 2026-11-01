@@ -15,6 +15,7 @@
     "@fontsource/ibm-plex-mono": "^5.2.0",
     "@fontsource/mitr": "^5.2.0",
     "@fontsource/noto-sans-thai": "^5.2.0",
+    "@vercel/analytics": "^2.0.1",
     "qrcode-generator": "^2.0.0"
   },
   "devDependencies": {
