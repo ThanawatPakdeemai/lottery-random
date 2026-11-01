@@ -7,8 +7,10 @@ import '@fontsource/ibm-plex-mono/500.css';
 import './styles.css';
 import { LotteryPage } from './pages/LotteryPage';
 import { registerPwa } from './pwa/register';
+import { inject } from '@vercel/analytics';
 
 const root = document.getElementById('app');
 if (!root) throw new Error('Missing application root');
 LotteryPage(root);
 registerPwa();
+inject();
